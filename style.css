@@ -737,3 +737,65 @@ body.locked { overflow: hidden; }
 }
 @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
 .w-cta:focus { outline: none; } .w-cta:focus-visible { outline: 2px solid rgba(244,209,75,.7); outline-offset: 3px; }
+
+/* ================= ADMIN — SEND ON WHATSAPP ================= */
+.wa-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
+.wa-form { display: flex; flex-direction: column; gap: 14px; }
+.wa-form .set-field .opt { font-weight: 500; }
+.wa-msg { min-height: 230px; font-size: 13.5px; line-height: 1.55; }
+.wa-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.wa-chip {
+  border: 1.5px solid var(--border); background: #fff; color: var(--muted); padding: 8px 14px; border-radius: 99px;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s;
+}
+.wa-chip:hover { border-color: #CFCBC3; color: var(--text); }
+.wa-chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.wa-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-wa { background: #25D366; color: #fff; padding: 12px 20px; font-size: 15px; }
+.btn-wa:hover { background: #1EBE5A; box-shadow: 0 8px 18px -8px rgba(37,211,102,.7); }
+.btn-wa .ico, .wa-actions .btn .ico { width: 17px; height: 17px; }
+.wa-tip { margin: 0; font-size: 12.5px; color: var(--muted); background: #FAF9F6; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+
+/* phone mock */
+.wa-phone { position: sticky; top: 16px; border-radius: 26px; overflow: hidden; border: 8px solid var(--ink); background: #EFE7DD; box-shadow: var(--shadow-lg); }
+.wa-top { display: flex; align-items: center; gap: 10px; background: #075E54; color: #fff; padding: 12px 14px; }
+.wa-top b { display: block; font-size: 14px; } .wa-top small { font-size: 11.5px; opacity: .8; }
+.wa-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: var(--red); display: grid; place-items: center; font-family: var(--font-head); font-weight: 700; }
+.wa-chat {
+  padding: 16px 12px 22px; min-height: 420px; max-height: 70vh; overflow-y: auto;
+  background-color: #EFE7DD;
+  background-image: radial-gradient(rgba(0,0,0,.035) 1px, transparent 1px); background-size: 14px 14px;
+}
+.wa-bubble {
+  position: relative; margin-left: auto; max-width: 92%; background: #D9FDD3; border-radius: 10px 0 10px 10px;
+  padding: 4px 4px 18px; box-shadow: 0 1px 1px rgba(0,0,0,.12); animation: fadeUp .35s var(--ease);
+}
+.wa-bubble::after { content: ''; position: absolute; right: -7px; top: 0; border-left: 8px solid #D9FDD3; border-bottom: 9px solid transparent; }
+.wa-preview { display: block; background: #CFF5C8; border-radius: 7px; overflow: hidden; text-decoration: none; color: #111; }
+.wa-preview img { display: block; width: 100%; aspect-ratio: 1200 / 630; object-fit: cover; }
+.wa-preview div { padding: 7px 9px 8px; }
+.wa-preview b { display: block; font-size: 12.5px; line-height: 1.3; }
+.wa-preview span { display: block; font-size: 11.5px; color: #4B5B4A; margin-top: 2px; line-height: 1.35; }
+.wa-preview small { display: block; font-size: 10.5px; color: #6B7B6A; margin-top: 3px; }
+.wa-text { padding: 6px 7px 0; font-size: 13.5px; line-height: 1.45; color: #111B21; word-wrap: break-word; }
+.wa-text a { color: #027EB5; word-break: break-all; }
+.wa-time { position: absolute; right: 8px; bottom: 4px; font-size: 10.5px; color: #667781; }
+
+.wa-sent { display: flex; flex-direction: column; }
+.wa-sent div { display: grid; grid-template-columns: 1.2fr 1fr 1.2fr 60px; gap: 10px; padding: 10px 0; border-bottom: 1px solid #F0EEE9; font-size: 13.5px; align-items: center; }
+.wa-sent div:last-child { border-bottom: 0; }
+.wa-sent span { color: var(--muted); }
+.wa-sent small { color: var(--faint); text-align: right; }
+
+.wa-tpl-row { padding: 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; background: #FCFBFA; }
+.wa-tpl-row .list-row { margin-bottom: 8px; }
+.wa-tpl-row textarea { font-size: 13.5px; }
+
+@media (max-width: 1060px) {
+  .wa-layout { grid-template-columns: 1fr; }
+  .wa-phone { position: static; max-width: 380px; margin: 0 auto; width: 100%; }
+}
+@media (max-width: 600px) {
+  .wa-sent div { grid-template-columns: 1fr 1fr; }
+  .wa-actions .btn { flex: 1; }
+}
