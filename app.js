@@ -1241,8 +1241,7 @@ async function renderShareKit() {
     const blob = await kitBlob($('kit_' + f.id), 'image/jpeg');
     const file = new File([blob], 'Litpax_Feedback.jpg', { type: 'image/jpeg' });
     const caption = kitCaption(f.src);
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await kitCopy(caption); await navigator.share({ files: [file], text: caption }); }
       catch (e) { if (e.name !== 'AbortError') toast('Sharing failed. Try Download instead.', false); }
     } else {
