@@ -1,5 +1,5 @@
 /* Litpax Review — Service Worker (static cache, network-first) */
-const CACHE = 'lx-review-v4';
+const CACHE = 'lx-review-v5';
 const ASSETS = ['./', './index.html', './style.css', './app.js', './config.js', './manifest.json',
   './assets/logo-x.png', './assets/icon-192.png', './assets/icon-512.png', './assets/og-image.jpg'];
 
