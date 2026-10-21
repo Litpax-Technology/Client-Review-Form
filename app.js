@@ -21,7 +21,10 @@ const ICONS = {
   list: '<svg class="ico" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>',
   phone: '<svg class="ico" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>',
   gear: '<svg class="ico" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>',
-  download: '<svg class="ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>'
+  download: '<svg class="ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  chat: '<svg class="ico" viewBox="0 0 24 24"><path d="M3.5 20.5l1.3-4A8.5 8.5 0 1 1 8 19.6z"/><path d="M9 10.5h.01M12 10.5h.01M15 10.5h.01"/></svg>',
+  copy: '<svg class="ico" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
+  send: '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>'
 };
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z"/></svg>';
 
@@ -447,7 +450,7 @@ function showThankYou(rec, r) {
   $('thankWish').textContent = cfgText('ThankYouWish', 'Wishing you and your family a bright, joyful and prosperous festive season!');
 
   const avg = r.avg || RATING_FIELDS.reduce((s, f) => s + rec[f], 0) / 4;
-  const starRow = (v) => [1, 2, 3, 4, 5].map(i => STAR.replace('<svg', `<svg class="${i <= Math.round(v) ? 'on' : ''}"`)).join('');
+  const starRow = (v) => [1, 2, 3, 4, 5].map(i => STAR.replace('<svg', `<svg class="${i <= Math.floor(v + .25) ? 'on' : ''}"`)).join('');
   $('thankAvg').innerHTML = `<b>${Number(avg).toFixed(1)}</b><div><div class="avg-stars">${starRow(avg)}</div><small>Your average rating</small></div>`;
   $('thankSummary').innerHTML = CATS.map((c, i) => `
     <div class="ts-item" style="animation-delay:${1.5 + i * .08}s"><div class="ts-stars">${starRow(rec[c.field])}</div><b>${rec[c.field]}<small>/5</small></b><span>${esc(catLabel(c))}</span></div>`).join('');
@@ -586,6 +589,7 @@ function buildNav(pending) {
     { id: 'dashboard', label: 'Dashboard', icon: ICONS.dash },
     { id: 'reviews', label: 'All Reviews', icon: ICONS.list },
     { id: 'callbacks', label: 'Callbacks', icon: ICONS.phone, badge: pending },
+    { id: 'whatsapp', label: 'Send on WhatsApp', icon: ICONS.chat },
   ];
   if (state.role === 'Admin') items.push({ id: 'settings', label: 'Settings', icon: ICONS.gear });
   $('nav').innerHTML = items.map(i => `
@@ -605,7 +609,120 @@ function go(view) {
   if (view === 'dashboard') return renderDashboard();
   if (view === 'reviews') { state.filters.callback = ''; state.page = 1; return renderReviews('All Reviews'); }
   if (view === 'callbacks') { state.filters.callback = 'Pending'; state.page = 1; return renderReviews('Callbacks'); }
+  if (view === 'whatsapp') return renderWhatsApp();
   if (view === 'settings') return renderSettings();
+}
+
+/* ---------- Send feedback request on WhatsApp ---------- */
+const WA_DEFAULTS = [
+  { key: 'Festive Thank You', value: "✨ *Happy Festive Season from Litpax!* ✨\n\nDear {Name},\n\nThank you for trusting Litpax. Your trust is the energy behind every battery we build. 🔋\n\nWe'd love to hear about your experience. It takes *less than a minute*:\n\n👉 {Link}\n\nYour feedback helps us serve you better.\n\n_We don't sell products, we sell service._\n*Team Litpax* ⚡" },
+  { key: 'After Delivery', value: "Hello {Name} 👋\n\nYour Litpax battery has been delivered. Thank you for choosing us! 🔋\n\nHow was your experience with our product and delivery? Please rate us here. It takes *just 30 seconds*:\n\n👉 {Link}\n\n⭐⭐⭐⭐⭐\n\nFor any help, just reply to this message.\n\n_Service Beyond the Sale_\n*Team Litpax* ⚡" },
+  { key: 'After Service', value: "Hello {Name},\n\nYour Litpax service request has been completed. ✅\n\nWas our team helpful? Your honest rating helps us improve every day:\n\n👉 {Link}\n\nIf anything is still not right, reply here and our service team will call you back.\n\n_Litpax: Service First. Always._\n*Team Litpax* ⚡" }
+];
+function waTemplates() { const t = cfgRows('WaTemplate').filter(r => r.key && r.value); return t.length ? t : WA_DEFAULTS; }
+function formUrl() { return location.origin + location.pathname.replace(/index\.html$/, ''); }
+function srcSlug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'whatsapp'; }
+function waFormat(text) {
+  return esc(text)
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s>])\*([^*\n]+)\*(?=[\s<.,!?:;)]|$)/g, '$1<b>$2</b>')
+    .replace(/(^|[\s>])_([^_\n]+)_(?=[\s<.,!?:;)]|$)/g, '$1<i>$2</i>')
+    .replace(/(^|[\s>])~([^~\n]+)~(?=[\s<.,!?:;)]|$)/g, '$1<s>$2</s>')
+    .replace(/\n/g, '<br>');
+}
+
+function renderWhatsApp() {
+  $('pageTitle').textContent = 'Send on WhatsApp';
+  const tpls = waTemplates();
+  const host = location.host || 'litpax';
+  $('page').innerHTML = `
+    <div class="wa-layout">
+      <div class="card">
+        <h3>Feedback Request</h3>
+        <div class="wa-form">
+          <div class="set-field"><label for="waName">Customer name</label>
+            <input class="input" id="waName" maxlength="40" placeholder="e.g. Rajesh"></div>
+          <div class="set-field"><label for="waPhone">Mobile number <span class="opt">Blank = choose contact in WhatsApp</span></label>
+            <div class="phone-wrap"><span class="phone-prefix">+91</span>
+            <input class="input" id="waPhone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div></div>
+          <div class="set-field"><label>Template</label>
+            <div class="wa-chips" id="waChips">${tpls.map((t, i) => `<button type="button" class="wa-chip${i === 0 ? ' on' : ''}" data-i="${i}">${esc(t.key)}</button>`).join('')}</div>
+          </div>
+          <div class="set-field"><label for="waMsg">Message <span class="opt">You can edit before sending</span></label>
+            <textarea class="input textarea wa-msg" id="waMsg" maxlength="1500"></textarea></div>
+          <div class="wa-actions">
+            <button class="btn btn-wa" id="waOpen">${ICONS.send}<span>Open in WhatsApp</span></button>
+            <button class="btn btn-ghost" id="waCopy">${ICONS.copy}<span>Copy Message</span></button>
+          </div>
+          <p class="wa-tip">Tip: send from the company WhatsApp number your customers already know. Saved contacts see the link preview card; new numbers may see a plain link until they reply once.</p>
+        </div>
+      </div>
+
+      <div class="wa-phone">
+        <div class="wa-top"><span class="wa-avatar">L</span><div><b>Litpax Technology</b><small>online</small></div></div>
+        <div class="wa-chat">
+          <div class="wa-bubble">
+            <a class="wa-preview" href="${esc(formUrl())}" target="_blank" rel="noopener">
+              <img src="assets/og-image.jpg" alt="">
+              <div><b>We Don't Just Sell Batteries. We Deliver Trust.</b>
+              <span>Share your Litpax experience in 30 seconds. Your feedback powers our service.</span>
+              <small>${esc(host)}</small></div>
+            </a>
+            <div class="wa-text" id="waPreview"></div>
+            <span class="wa-time">${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} ✓✓</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="waSentCard" style="margin-top:14px"></div>`;
+
+  let cur = 0;
+  const build = () => {
+    const t = tpls[cur];
+    const name = $('waName').value.trim();
+    const nice = name ? name.charAt(0).toUpperCase() + name.slice(1) : 'Customer';
+    const link = formUrl() + '?src=' + srcSlug(t.key);
+    $('waMsg').value = t.value.replace(/\{Name\}/gi, nice).replace(/\{Link\}/gi, link);
+    paint();
+  };
+  const paint = () => { $('waPreview').innerHTML = waFormat($('waMsg').value); };
+
+  $('waChips').querySelectorAll('.wa-chip').forEach(b => b.onclick = () => {
+    cur = Number(b.dataset.i);
+    $('waChips').querySelectorAll('.wa-chip').forEach(x => x.classList.toggle('on', x === b));
+    build();
+  });
+  $('waName').addEventListener('input', build);
+  $('waPhone').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10); });
+  $('waMsg').addEventListener('input', paint);
+
+  $('waOpen').onclick = () => {
+    const phone = $('waPhone').value.trim();
+    if (phone && !/^[6-9]\d{9}$/.test(phone)) { $('waPhone').classList.add('invalid'); return toast('Enter a valid 10-digit mobile number', false); }
+    $('waPhone').classList.remove('invalid');
+    const msg = $('waMsg').value.trim();
+    if (!msg) return toast('Message is empty', false);
+    window.open('https://wa.me/' + (phone ? '91' + phone : '') + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+    const entry = { name: $('waName').value.trim() || '—', phone: phone || '—', tpl: tpls[cur].key, at: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) };
+    const sent = store.get('lx_wa_sent', true) || [];
+    sent.unshift(entry); store.set('lx_wa_sent', sent.slice(0, 30), true);
+    paintSent();
+    adminApi('logWa', { name: entry.name, phone: entry.phone, template: entry.tpl }).catch(() => {});
+    $('waName').value = ''; $('waPhone').value = ''; build(); $('waName').focus();
+  };
+  $('waCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('waMsg').value); }
+    catch (e) { $('waMsg').select(); document.execCommand('copy'); }
+    toast('Message copied');
+  };
+
+  function paintSent() {
+    const sent = store.get('lx_wa_sent', true) || [];
+    $('waSentCard').innerHTML = `<div class="card-head"><h3>Sent in this session</h3><span class="muted" style="font-size:13px">${sent.length} request${sent.length === 1 ? '' : 's'}</span></div>` +
+      (sent.length ? `<div class="wa-sent">${sent.map(s => `<div><b>${esc(s.name)}</b><span>${esc(s.phone)}</span><span>${esc(s.tpl)}</span><small>${esc(s.at)}</small></div>`).join('')}</div>`
+        : '<p class="muted" style="margin:0;font-size:13.5px">Requests you open in WhatsApp will be listed here so nobody gets messaged twice.</p>');
+  }
+  build(); paintSent();
 }
 
 /* ---------- Dashboard ---------- */
@@ -958,6 +1075,12 @@ async function renderSettings() {
       <p>Options for the "Product Purchased" dropdown. Leave empty to hide the field.</p>
       ${listBlock('prodList', cfgList('Product'), 'Product name')}
     </div>
+    <div class="set-section">
+      <h3>WhatsApp Templates</h3>
+      <p>Used on the "Send on WhatsApp" page. Use {Name} for the customer name and {Link} for the form link. *bold* and _italic_ work in WhatsApp.</p>
+      <div id="waTplList">${waTemplates().map(waTplRow).join('')}</div>
+      <button class="btn btn-ghost btn-sm" id="addWaTpl">+ Add Template</button>
+    </div>
     <div class="save-bar"><button class="btn btn-primary" id="saveCfg">Save Settings</button></div>
 
     <div class="set-section">
@@ -975,12 +1098,22 @@ async function renderSettings() {
     wireRemove(box); box.lastElementChild.querySelector('input').focus();
   });
   wireRemove($('page'));
+  $('addWaTpl').onclick = () => {
+    $('waTplList').insertAdjacentHTML('beforeend', waTplRow({ key: '', value: 'Hello {Name},\n\n\n👉 {Link}\n\n*Team Litpax* ⚡' }));
+    wireRemove($('waTplList')); $('waTplList').lastElementChild.querySelector('input').focus();
+  };
   $('addUser').onclick = () => { $('userList').insertAdjacentHTML('beforeend', userRow({ name: '', role: 'Viewer', active: true }, usersRes.roles)); wireRemove($('userList')); };
   $('saveCfg').onclick = saveSettings;
   $('saveUsers').onclick = saveUsers;
 }
 function listRow(v, ph) {
   return `<div class="list-row"><input class="input" maxlength="200" value="${esc(v)}" placeholder="${esc(ph)}"><button class="icon-btn" data-rm title="Remove">×</button></div>`;
+}
+function waTplRow(t) {
+  return `<div class="wa-tpl-row">
+    <div class="list-row"><input class="input" data-wa="key" maxlength="40" value="${esc(t.key)}" placeholder="Template name (e.g. After Delivery)"><button class="icon-btn" data-rm-tpl title="Remove">×</button></div>
+    <textarea class="input textarea" data-wa="value" maxlength="1000" style="min-height:150px">${esc(t.value)}</textarea>
+  </div>`;
 }
 function userRow(u, roles) {
   return `<div class="user-row" data-origin="${esc(u.name)}">
@@ -993,6 +1126,7 @@ function userRow(u, roles) {
 }
 function wireRemove(root) {
   root.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => b.parentElement.remove());
+  root.querySelectorAll('[data-rm-tpl]').forEach(b => b.onclick = () => b.closest('.wa-tpl-row').remove());
 }
 
 async function saveSettings() {
@@ -1007,12 +1141,22 @@ async function saveSettings() {
     .forEach((v, n) => items.push({ type: 'Product', key: String(n + 1), value: v }));
   [...$('pointList').querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean).slice(0, 4)
     .forEach((v, n) => items.push({ type: 'PopupPoint', key: String(n + 1), value: v }));
+  const tplNames = {};
+  for (const row of $('waTplList').querySelectorAll('.wa-tpl-row')) {
+    const key = row.querySelector('[data-wa=key]').value.trim(), value = row.querySelector('[data-wa=value]').value.trim();
+    if (!key && !value) continue;
+    if (!key || !value) return toast('Each WhatsApp template needs a name and a message', false);
+    if (tplNames[key.toLowerCase()]) return toast('Duplicate template name: ' + key, false);
+    if (!/\{Link\}/i.test(value)) return toast(`Template "${key}" must include {Link}`, false);
+    tplNames[key.toLowerCase()] = 1;
+    items.push({ type: 'WaTemplate', key, value });
+  }
 
   const url = items.find(i => i.key === 'GoogleReviewURL').value;
   if (url && !/^https:\/\//i.test(url)) return toast('Google review link must start with https://', false);
   const logo = items.find(i => i.key === 'LogoURL').value;
   if (logo && !/^https:\/\//i.test(logo)) return toast('Logo URL must start with https://', false);
-  if (items.some(i => i.value.length > 500)) return toast('A setting is longer than 500 characters', false);
+  if (items.some(i => i.value.length > (i.type === 'WaTemplate' ? 1000 : 500))) return toast('A setting is too long (max 500, templates 1000)', false);
 
   const btn = $('saveCfg'); btn.disabled = true; btn.textContent = 'Saving...';
   try {
