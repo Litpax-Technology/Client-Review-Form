@@ -1,7 +1,7 @@
 /* Litpax Review — Service Worker (static cache, network-first) */
-const CACHE = 'lx-review-v2';
+const CACHE = 'lx-review-v3';
 const ASSETS = ['./', './index.html', './style.css', './app.js', './config.js', './manifest.json',
-  './assets/logo-x.png', './assets/icon-192.png', './assets/icon-512.png'];
+  './assets/logo-x.png', './assets/icon-192.png', './assets/icon-512.png', './assets/og-image.jpg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
