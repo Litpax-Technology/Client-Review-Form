@@ -107,10 +107,10 @@ function ratingLabel(v) { return cfgMap('RatingLabel')[String(v)] || ['', 'Poor'
 function logoHTML() {
   const url = cfgText('LogoURL');
   if (url) return `<img class="logo-img" src="${esc(url)}" alt="Litpax">`;
-  return `<span class="wm" aria-hidden="true">Litpa</span><img class="lx" src="assets/logo-x.png" alt="" aria-hidden="true"><span class="hp">Litpax</span>`;
+  return `<span class="wm" aria-hidden="true">Litpa</span><img class="lx" src="assets/logo-x.png" alt="" aria-hidden="true" onerror="this.outerHTML='<span class=&quot;lx-fallback&quot;>x</span>'"><span class="hp">Litpax</span>`;
 }
 function paintLogos() {
-  ['heroLogo', 'footerLogo', 'loginLogo'].forEach(id => {
+  ['heroLogo', 'footerLogo', 'loginLogo', 'wLogo'].forEach(id => {
     const el = $(id); if (!el) return;
     el.innerHTML = id === 'footerLogo' ? `<div class="logo">${logoHTML()}</div>` : logoHTML();
   });
@@ -161,6 +161,90 @@ function renderPublic() {
   renderProducts();
   restoreDraft();
   updateCharge();
+  showWelcome();
+}
+
+/* =========================================================
+   WELCOME / FESTIVE CARD (shown once per visit, before the form)
+   ========================================================= */
+const W_DEFAULTS = {
+  PopupEnabled: 'Yes',
+  PopupBadge: 'Happy Festive Season',
+  PopupTitle: 'Thank You for Powering Our Journey',
+  PopupText: "Your trust is the energy behind every battery we build. This festive season, we're grateful to have you with us, and we promise to keep earning that trust every single day.",
+  PopupCTA: 'Share My Feedback',
+  PopupSign: 'With gratitude, Team Litpax'
+};
+const W_POINTS = ['Service Beyond the Sale', 'Made in Haryana, Built for India', 'Always Here When You Need Us'];
+let welcomeShown = false, wTimer = null;
+
+function showWelcome() {
+  if (welcomeShown) return;
+  if (String(cfgText('PopupEnabled', W_DEFAULTS.PopupEnabled)).toLowerCase() === 'no') return;
+  if (store.get('lx_welcome_seen', true)) return;
+  if (!$('thankView').classList.contains('hidden')) return;
+  welcomeShown = true;
+
+  const w = (k) => cfgText(k, W_DEFAULTS[k]);
+  const SPARK_ICON = '<svg viewBox="0 0 24 24"><path d="M12 1.5l2.6 7.9 7.9 2.6-7.9 2.6L12 22.5l-2.6-7.9L1.5 12l7.9-2.6z"/></svg>';
+  const CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+  $('wBadge').innerHTML = SPARK_ICON + esc(w('PopupBadge'));
+  const title = w('PopupTitle').trim().split(' ');
+  const cut = Math.max(1, title.length - 2);       // highlight last two words
+  $('wTitle').innerHTML = esc(title.slice(0, cut).join(' ')) + ' <span class="hl">' + esc(title.slice(cut).join(' ')) + '</span>';
+  $('wText').textContent = w('PopupText');
+  const points = cfgList('PopupPoint').length ? cfgList('PopupPoint') : W_POINTS;
+  $('wPoints').innerHTML = points.slice(0, 4).map((p, i) =>
+    `<div class="w-point" style="animation-delay:${.6 + i * .1}s"><i>${CHECK}</i>${esc(p)}</div>`).join('');
+  $('wCtaLabel').textContent = w('PopupCTA');
+  $('wSign').textContent = w('PopupSign');
+  $('wSign').classList.toggle('hidden', !w('PopupSign'));
+
+  // rotating tagline inside the card
+  const tags = cfgList('Tagline');
+  const tEl = $('wTagline');
+  tEl.parentElement.classList.toggle('hidden', !tags.length);
+  let ti = 0; tEl.textContent = tags[0] || '';
+  clearInterval(wTimer);
+  if (tags.length > 1) wTimer = setInterval(() => {
+    tEl.classList.add('out');
+    setTimeout(() => { ti = (ti + 1) % tags.length; tEl.textContent = tags[ti]; tEl.classList.remove('out'); }, 450);
+  }, 2800);
+
+  makeSparkles();
+  $('welcome').classList.remove('hidden', 'closing');
+  document.body.classList.add('locked');
+  setTimeout(() => $('wCta').focus({ preventScroll: true }), 800);
+}
+
+function makeSparkles() {
+  const box = $('wSparkles');
+  const colors = ['#EB5558', '#F4D14B', '#F7DE7E', '#FFFFFF', '#F39A55'];
+  const small = window.innerWidth < 600;
+  let html = '';
+  for (let i = 0; i < (small ? 18 : 30); i++) {
+    const size = 3 + Math.random() * 7;
+    const star = Math.random() < .35;
+    const c = colors[i % colors.length];
+    html += `<span class="spark${star ? ' star' : ''}" style="left:${Math.random() * 100}%;width:${star ? size * 2 : size}px;height:${star ? size * 2 : size}px;` +
+      `background:${c};color:${c};box-shadow:0 0 ${size * 2}px ${c};animation-duration:${7 + Math.random() * 8}s;animation-delay:${-Math.random() * 12}s"></span>`;
+  }
+  box.innerHTML = html;
+}
+
+function closeWelcome() {
+  const el = $('welcome');
+  if (el.classList.contains('hidden') || el.classList.contains('closing')) return;
+  store.set('lx_welcome_seen', true, true);
+  el.classList.add('closing');
+  clearInterval(wTimer);
+  setTimeout(() => {
+    el.classList.add('hidden'); el.classList.remove('closing');
+    $('wSparkles').innerHTML = '';
+    document.body.classList.remove('locked');
+    $('fName').focus({ preventScroll: true });
+  }, 320);
 }
 
 function startTaglines() {
