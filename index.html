@@ -208,6 +208,30 @@
     </div>
   </div>
 
+  <!-- Welcome / festive card (shows before the form) -->
+  <div id="welcome" class="welcome hidden" role="dialog" aria-modal="true" aria-labelledby="wTitle">
+    <div class="w-sparkles" id="wSparkles" aria-hidden="true"></div>
+    <div class="w-frame">
+      <div class="w-card">
+        <button type="button" class="w-close" id="wClose" aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        <div class="w-glow" aria-hidden="true"></div>
+        <div class="w-logo"><div class="logo small" id="wLogo"></div></div>
+        <span class="w-badge w-in" id="wBadge"></span>
+        <h2 id="wTitle" class="w-title w-in"></h2>
+        <p id="wText" class="w-text w-in"></p>
+        <div class="w-points w-in" id="wPoints"></div>
+        <div class="w-tagline w-in"><span class="bolt-dot"></span><span id="wTagline" class="rot-tagline"></span></div>
+        <button type="button" class="btn-submit w-cta w-in" id="wCta">
+          <span class="btn-label" id="wCtaLabel"></span>
+          <svg class="btn-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+        </button>
+        <p class="w-sign w-in" id="wSign"></p>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
