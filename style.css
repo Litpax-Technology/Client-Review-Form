@@ -562,3 +562,178 @@ button, input, select, textarea { font-family: inherit; }
   .filters .search { flex-basis: 100%; }
 }
 .m-info a { color: var(--red-dark); font-weight: 600; text-decoration: none; }
+
+/* ================= WELCOME / FESTIVE CARD ================= */
+.welcome {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 18px;
+  background: radial-gradient(ellipse at 50% 30%, rgba(40,24,26,.82), rgba(10,10,12,.92));
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn .35s ease both; overflow-y: auto;
+}
+.welcome.closing { animation: fadeOut .32s ease forwards; }
+.welcome.closing .w-frame { animation: cardOut .32s var(--ease) forwards; }
+body.locked { overflow: hidden; }
+
+.w-sparkles { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.spark {
+  position: absolute; bottom: -20px; border-radius: 50%;
+  animation: rise linear infinite; opacity: 0;
+}
+.spark.star { border-radius: 0; background: none !important; }
+.spark.star::before {
+  content: ''; position: absolute; inset: 0; background: currentColor;
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+}
+
+/* gradient border frame */
+.w-frame {
+  position: relative; width: 100%; max-width: 460px; padding: 1.5px; border-radius: 26px;
+  background: linear-gradient(140deg, rgba(235,85,88,.9), rgba(244,209,75,.6) 45%, rgba(255,255,255,.08) 70%, rgba(235,85,88,.7));
+  box-shadow: 0 30px 80px -20px rgba(235,85,88,.45), 0 0 0 1px rgba(255,255,255,.04);
+  animation: cardIn .7s cubic-bezier(.2,1.3,.4,1) both;
+}
+.w-card {
+  position: relative; overflow: hidden; isolation: isolate;
+  background: linear-gradient(180deg, #1B1B21 0%, #141418 100%);
+  border-radius: 24.5px; padding: 34px 28px 26px; text-align: center; color: #fff;
+}
+.w-glow { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.w-glow::before, .w-glow::after {
+  content: ''; position: absolute; border-radius: 50%; filter: blur(50px);
+}
+.w-glow::before { width: 260px; height: 260px; background: var(--red); opacity: .32; top: -130px; left: -80px; animation: drift 9s ease-in-out infinite alternate; }
+.w-glow::after  { width: 220px; height: 220px; background: var(--yellow); opacity: .2; bottom: -120px; right: -70px; animation: drift 11s ease-in-out infinite alternate-reverse; }
+
+.w-close {
+  position: absolute; top: 14px; right: 14px; z-index: 2; width: 38px; height: 38px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); color: #D7D7DE; cursor: pointer;
+  display: grid; place-items: center; transition: background .2s, transform .25s var(--ease), color .2s;
+}
+.w-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.w-close:hover { background: rgba(235,85,88,.25); color: #fff; transform: rotate(90deg); }
+
+.w-logo { display: flex; justify-content: center; margin-bottom: 20px; animation: fadeUp .6s .15s var(--ease) both; }
+.w-logo .logo { font-size: 32px; }
+
+.w-badge {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; border-radius: 99px;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
+  background: linear-gradient(90deg, var(--yellow), #F7DE7E 50%, var(--yellow));
+  background-size: 200% 100%; animation: shine 3s linear infinite;
+  box-shadow: 0 6px 20px -6px rgba(244,209,75,.6);
+}
+.w-badge svg { width: 14px; height: 14px; fill: var(--red); animation: twinkle 1.6s ease-in-out infinite; }
+
+.w-title {
+  font-size: clamp(26px, 6.4vw, 34px); font-weight: 600; line-height: 1.15; margin: 18px 0 12px;
+  text-wrap: balance;
+}
+.w-title .hl { background: linear-gradient(90deg, var(--red), var(--yellow)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.w-text { color: #BEBEC8; font-size: 15px; line-height: 1.6; margin: 0 auto; max-width: 370px; }
+
+.w-points { display: flex; flex-direction: column; gap: 8px; margin: 22px auto 0; max-width: 330px; text-align: left; }
+.w-point {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.07); font-size: 14px; font-weight: 500; color: #EDEDF1;
+}
+.w-point i {
+  flex: none; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
+  background: rgba(244,209,75,.14); color: var(--yellow);
+}
+.w-point i svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+.w-tagline {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 20px; font-size: 13.5px; color: #D7D7DE; font-style: italic; min-height: 22px;
+}
+.w-cta { margin-top: 20px; }
+.w-sign { margin: 16px 0 0; font-family: var(--font-head); font-size: 14px; color: #8F8F99; letter-spacing: .02em; }
+
+/* staggered entrance */
+.w-in { animation: fadeUp .6s var(--ease) both; }
+.w-badge.w-in   { animation: fadeUp .6s .25s var(--ease) both, shine 3s 1s linear infinite; }
+.w-title.w-in   { animation-delay: .35s; }
+.w-text.w-in    { animation-delay: .45s; }
+.w-points.w-in  { animation-delay: .55s; }
+.w-tagline.w-in { animation-delay: .65s; }
+.w-cta.w-in     { animation-delay: .75s; }
+.w-sign.w-in    { animation-delay: .85s; }
+.w-point { animation: fadeUp .5s var(--ease) both; }
+
+/* logo fallback when assets/logo-x.png is missing */
+.lx-fallback { color: var(--red); font-weight: 600; margin-left: -.02em; }
+
+@keyframes cardIn  { from { opacity: 0; transform: translateY(30px) scale(.88); } to { opacity: 1; transform: none; } }
+@keyframes cardOut { to { opacity: 0; transform: translateY(16px) scale(.94); } }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes rise    { 0% { transform: translateY(0) scale(.6); opacity: 0; } 12% { opacity: 1; } 85% { opacity: .9; } 100% { transform: translateY(-105vh) scale(1.1); opacity: 0; } }
+@keyframes twinkle { 0%,100% { transform: scale(1) rotate(0); opacity: 1; } 50% { transform: scale(.7) rotate(45deg); opacity: .7; } }
+@keyframes shine   { to { background-position: -200% 0; } }
+
+@media (max-width: 600px) {
+  .w-card { padding: 30px 20px 22px; }
+  .w-logo .logo { font-size: 28px; }
+}
+
+/* ================= THANK YOU — celebration ================= */
+.thank-card { padding: 0 0 30px; overflow: hidden; }
+.thank-top {
+  position: relative; isolation: isolate; overflow: hidden; color: #fff;
+  background: linear-gradient(180deg, #1B1B21, #141418);
+  padding: 40px 24px 34px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.t-glow { position: absolute; inset: 0; z-index: -1; }
+.t-glow::before, .t-glow::after { content: ''; position: absolute; border-radius: 50%; filter: blur(60px); }
+.t-glow::before { width: 300px; height: 300px; background: var(--red); opacity: .35; top: -150px; left: -60px; animation: drift 10s ease-in-out infinite alternate; }
+.t-glow::after  { width: 260px; height: 260px; background: var(--yellow); opacity: .22; bottom: -150px; right: -60px; animation: drift 12s ease-in-out infinite alternate-reverse; }
+.t-sparks { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.t-sparks .spark { bottom: -12px; }
+.thank-top .tb-body { border-color: #fff; }
+.thank-top .tb-cap { background: #fff; }
+.thank-top .thank-battery { filter: drop-shadow(0 0 22px rgba(244,209,75,.35)); }
+.t-badge {
+  display: table; margin: 22px auto 0; padding: 6px 14px; border-radius: 99px; font-size: 11.5px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--yellow);
+  background: rgba(244,209,75,.1); border: 1px solid rgba(244,209,75,.3);
+  animation: fadeUp .5s .9s var(--ease) both;
+}
+.thank-card h2.t-name { font-size: clamp(30px, 7vw, 42px); font-weight: 600; margin: 14px 0 2px; animation: fadeUp .6s 1s var(--ease) both; }
+.t-title {
+  font-size: clamp(18px, 4vw, 22px); font-weight: 600; margin: 0;
+  background: linear-gradient(90deg, var(--red), var(--yellow)); -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: fadeUp .6s 1.1s var(--ease) both;
+}
+.t-text { color: #C4C4CD; max-width: 430px; margin: 14px auto 0; font-size: 15.5px; line-height: 1.6; animation: fadeUp .6s 1.2s var(--ease) both; }
+.t-wish {
+  display: inline-block; margin: 18px auto 0; padding: 12px 18px; border-radius: 14px; max-width: 440px;
+  font-family: var(--font-head); font-size: 16px; font-weight: 500; color: #FBE7A1; line-height: 1.45;
+  background: rgba(255,255,255,.05); border: 1px dashed rgba(244,209,75,.35);
+  animation: fadeUp .6s 1.3s var(--ease) both;
+}
+.t-wish:empty { display: none; }
+
+.thank-avg { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 26px auto 0; padding: 0 20px; animation: fadeUp .5s 1.4s var(--ease) both; }
+.thank-avg b { font-family: var(--font-head); font-size: 44px; font-weight: 600; line-height: 1; }
+.thank-avg .avg-stars { display: flex; gap: 2px; }
+.thank-avg .avg-stars svg { width: 22px; height: 22px; fill: #E9E6DF; }
+.thank-avg .avg-stars svg.on { fill: var(--yellow); filter: drop-shadow(0 1px 3px rgba(233,185,42,.5)); }
+.thank-avg small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 4px; text-align: left; }
+.thank-summary { padding: 0 20px; }
+.ts-item { animation-delay: 1.5s; }
+.ts-stars { display: flex; justify-content: center; gap: 1px; margin-bottom: 4px; }
+.ts-stars svg { width: 13px; height: 13px; fill: #E9E6DF; }
+.ts-stars svg.on { fill: var(--yellow); }
+.thank-card .thank-low, .thank-card .thank-google { margin-left: 20px; margin-right: 20px; }
+@media (min-width: 540px) { .thank-card .thank-low, .thank-card .thank-google { margin-left: auto; margin-right: auto; } }
+
+/* page-wide confetti burst */
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
+.confetti i {
+  position: absolute; top: -20px; width: 8px; height: 14px; border-radius: 2px; opacity: .95;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translate3d(0,0,0) rotate(0); opacity: 1; }
+  100% { transform: translate3d(var(--dx), 105vh, 0) rotate(var(--rot)); opacity: .9; }
+}
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
+.w-cta:focus { outline: none; } .w-cta:focus-visible { outline: 2px solid rgba(244,209,75,.7); outline-offset: 3px; }
