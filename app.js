@@ -24,7 +24,9 @@ const ICONS = {
   download: '<svg class="ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
   chat: '<svg class="ico" viewBox="0 0 24 24"><path d="M3.5 20.5l1.3-4A8.5 8.5 0 1 1 8 19.6z"/><path d="M9 10.5h.01M12 10.5h.01M15 10.5h.01"/></svg>',
   copy: '<svg class="ico" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>',
-  send: '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>'
+  send: '<svg class="ico" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>',
+  image: '<svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>',
+  share: '<svg class="ico" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>'
 };
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z"/></svg>';
 
@@ -590,6 +592,7 @@ function buildNav(pending) {
     { id: 'reviews', label: 'All Reviews', icon: ICONS.list },
     { id: 'callbacks', label: 'Callbacks', icon: ICONS.phone, badge: pending },
     { id: 'whatsapp', label: 'Send on WhatsApp', icon: ICONS.chat },
+    { id: 'sharekit', label: 'Share Kit', icon: ICONS.image },
   ];
   if (state.role === 'Admin') items.push({ id: 'settings', label: 'Settings', icon: ICONS.gear });
   $('nav').innerHTML = items.map(i => `
@@ -610,6 +613,7 @@ function go(view) {
   if (view === 'reviews') { state.filters.callback = ''; state.page = 1; return renderReviews('All Reviews'); }
   if (view === 'callbacks') { state.filters.callback = 'Pending'; state.page = 1; return renderReviews('Callbacks'); }
   if (view === 'whatsapp') return renderWhatsApp();
+  if (view === 'sharekit') return renderShareKit();
   if (view === 'settings') return renderSettings();
 }
 
@@ -991,6 +995,291 @@ function closeModal() { $('modal').classList.add('hidden'); }
 function refreshView() {
   if (state.view === 'reviews' || state.view === 'callbacks') loadTable();
   else go(state.view);
+}
+
+/* ---------- Share Kit: WhatsApp poster, Status, Print card (canvas) ---------- */
+const KIT_DEFAULTS = {
+  KitBadge: 'Happy Festive Season',
+  KitHeadline: 'How Did We Do?',
+  KitSubline: 'Rate your Litpax experience in 30 seconds',
+  KitTagline: "We Don't Sell Products, We Sell Service",
+  KitCaption: "✨ *Thank you for choosing Litpax!* ✨\n\nHow was your experience? Please rate us. It takes *just 30 seconds*:\n\n👉 {Link}\n\n_Your feedback powers our service._\n*Team Litpax* ⚡"
+};
+const KIT_FORMATS = [
+  { id: 'square', title: 'WhatsApp Poster', desc: 'Send as an image with the caption link. 1080 × 1080', w: 1080, h: 1080, src: 'wa-poster' },
+  { id: 'story',  title: 'WhatsApp Status', desc: 'Post on your business Status. 1080 × 1920', w: 1080, h: 1920, src: 'wa-status' },
+  { id: 'print',  title: 'Print Card (A6)', desc: 'For dispatch boxes, warranty cards and counters. 300 dpi', w: 1240, h: 1748, src: 'print' }
+];
+const kit = { logo: null, ready: false };
+
+function kitVal(k) { const el = document.querySelector(`[data-kit="${k}"]`); return el ? el.value.trim() : cfgText(k, KIT_DEFAULTS[k]); }
+function kitLink(src) { return formUrl() + '?src=' + src; }
+function kitShort() { return (location.host + location.pathname.replace(/index\.html$/, '')).replace(/\/$/, ''); }
+
+async function kitPrepare() {
+  if (kit.ready) return;
+  await loadScript(CONFIG.QR_JS);
+  try {
+    await Promise.all(['600 80px Jost', '500 40px Jost', '400 30px Inter', '600 30px Inter'].map(f => document.fonts.load(f)));
+  } catch (e) {}
+  kit.logo = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = 'assets/logo-x.png'; });
+  kit.ready = true;
+}
+
+/* drawing helpers */
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+function kitBg(ctx, W, H, glowScale = 1) {
+  ctx.fillStyle = '#141418'; ctx.fillRect(0, 0, W, H);
+  const glow = (x, y, r, c, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(1, `rgba(${c},0)`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
+  glow(W * .05, H * .02, 620 * glowScale, '235,85,88', .55);
+  glow(W * .98, H * .98, 560 * glowScale, '244,209,75', .3);
+  ctx.save(); ctx.globalAlpha = .06; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+  for (let x = -H; x < W + H; x += 46) { ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x + H * .47, 0); ctx.stroke(); }
+  ctx.restore();
+}
+function kitLogo(ctx, x, baseline, size, align = 'left', color = '#fff') {
+  ctx.font = `600 ${size}px Jost, Inter, sans-serif`; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  const tw = ctx.measureText('Litpa').width;
+  const xh = size * .78, xw = kit.logo ? xh * kit.logo.width / kit.logo.height : size * .5;
+  const total = tw - size * .13 + xw;
+  const x0 = align === 'center' ? x - total / 2 : x;
+  ctx.fillStyle = color; ctx.fillText('Litpa', x0, baseline);
+  if (kit.logo) ctx.drawImage(kit.logo, x0 + tw - size * .13, baseline - size * .66, xw, xh);
+  else { ctx.fillStyle = '#EB5558'; ctx.fillText('x', x0 + tw, baseline); }
+}
+function kitBadge(ctx, text, x, cy, size, align = 'left') {
+  if (!text) return;
+  text = text.toUpperCase();
+  ctx.font = `600 ${size}px Inter, sans-serif`; ctx.letterSpacing = (size * .14) + 'px';
+  const tw = ctx.measureText(text).width, padX = size * 1.1, h = size * 2.2, w = tw + padX * 2;
+  const x0 = align === 'center' ? x - w / 2 : x;
+  ctx.fillStyle = '#F4D14B'; rr(ctx, x0, cy - h / 2, w, h, h / 2); ctx.fill();
+  ctx.fillStyle = '#141418'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText(text, x0 + padX, cy + size * .05);
+  ctx.letterSpacing = '0px';
+}
+function kitWrap(ctx, text, maxW) {
+  const words = String(text).split(/\s+/); const lines = []; let line = '';
+  words.forEach(w => { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; });
+  if (line) lines.push(line); return lines;
+}
+function kitText(ctx, text, x, y, { font, color = '#fff', maxW = 900, lh = 1.15, align = 'left', size }) {
+  ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  const lines = kitWrap(ctx, text, maxW);
+  lines.forEach((l, i) => ctx.fillText(l, x, y + i * size * lh));
+  return y + (lines.length - 1) * size * lh;
+}
+function kitGradText(ctx, text, x, y, size, maxW, align = 'left') {
+  ctx.font = `600 ${size}px Jost, Inter, sans-serif`; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  const lines = kitWrap(ctx, text, maxW);
+  lines.forEach((l, i) => {
+    const w = ctx.measureText(l).width, x0 = align === 'center' ? x - w / 2 : x;
+    const g = ctx.createLinearGradient(x0, 0, x0 + w, 0); g.addColorStop(0, '#EB5558'); g.addColorStop(1, '#F4D14B');
+    ctx.fillStyle = g; ctx.fillText(l, x, y + i * size * 1.15);
+  });
+  return y + (lines.length - 1) * size * 1.15;
+}
+function kitStar(ctx, cx, cy, r, color) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r * .45 : r; ctx.lineTo(cx + rad * Math.cos(a), cy + rad * Math.sin(a)); }
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+function kitStars(ctx, x, cy, r, gap, align = 'left') {
+  const total = 5 * r * 2 + 4 * gap, x0 = align === 'center' ? x - total / 2 : x;
+  ctx.save(); ctx.shadowColor = 'rgba(244,209,75,.55)'; ctx.shadowBlur = r * .6;
+  for (let i = 0; i < 5; i++) kitStar(ctx, x0 + r + i * (2 * r + gap), cy, r, '#F4D14B');
+  ctx.restore();
+}
+function kitQR(ctx, url, x, y, size, dark = '#141418') {
+  const qr = qrcode(0, 'M'); qr.addData(url); qr.make();
+  const n = qr.getModuleCount(), cell = size / n;
+  ctx.fillStyle = dark;
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    if (qr.isDark(r, c)) ctx.fillRect(Math.floor(x + c * cell), Math.floor(y + r * cell), Math.ceil(cell), Math.ceil(cell));
+  }
+}
+function kitQRCard(ctx, url, cx, y, qrSize, label, labelSize) {
+  const pad = qrSize * .12, w = qrSize + pad * 2, h = qrSize + pad * 2 + labelSize * 2.6, x = cx - w / 2;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
+  ctx.fillStyle = '#fff'; rr(ctx, x, y, w, h, qrSize * .08); ctx.fill(); ctx.restore();
+  kitQR(ctx, url, x + pad, y + pad, qrSize);
+  ctx.font = `600 ${labelSize}px Inter, sans-serif`; ctx.letterSpacing = (labelSize * .16) + 'px';
+  ctx.fillStyle = '#EB5558'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx + labelSize * .08, y + qrSize + pad * 2 + labelSize * 1.15); ctx.letterSpacing = '0px';
+  return y + h;
+}
+
+function drawKit(fmt, canvas) {
+  const { w: W, h: H } = fmt;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const badge = kitVal('KitBadge'), head = kitVal('KitHeadline'), sub = kitVal('KitSubline'), tag = kitVal('KitTagline');
+  const url = kitLink(fmt.src), short = kitShort();
+
+  if (fmt.id === 'square') {
+    kitBg(ctx, W, H);
+    kitLogo(ctx, 80, 150, 84);
+    kitBadge(ctx, badge, 82, 236, 22);
+    let y = kitText(ctx, head, 80, 400, { font: '600 104px Jost, Inter, sans-serif', size: 104, maxW: 920, lh: 1.05 });
+    y = kitText(ctx, sub, 82, y + 70, { font: '400 36px Inter, sans-serif', size: 36, color: '#C9C9D1', maxW: 900, lh: 1.35 });
+    kitStars(ctx, 82, y + 80, 30, 16);
+    kitQRCard(ctx, url, 840, 650, 250, 'SCAN TO RATE', 20);
+    kitGradText(ctx, tag, 82, 760, 44, 560);
+    ctx.fillStyle = '#fff'; ctx.font = '600 26px Inter, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('Tap the link in the message', 82, 925);
+    ctx.fillStyle = '#9A9AA5'; ctx.font = '400 24px Inter, sans-serif';
+    ctx.fillText(short, 82, 968);
+  }
+
+  if (fmt.id === 'story') {
+    kitBg(ctx, W, H, 1.4);
+    kitLogo(ctx, W / 2, 250, 108, 'center');
+    kitBadge(ctx, badge, W / 2, 345, 26, 'center');
+    let y = kitText(ctx, head, W / 2, 560, { font: '600 116px Jost, Inter, sans-serif', size: 116, maxW: 980, lh: 1.05, align: 'center' });
+    y = kitText(ctx, sub, W / 2, y + 90, { font: '400 42px Inter, sans-serif', size: 42, color: '#C9C9D1', maxW: 820, lh: 1.35, align: 'center' });
+    kitStars(ctx, W / 2, y + 100, 38, 20, 'center');
+    const end = kitQRCard(ctx, url, W / 2, y + 190, 440, 'SCAN TO RATE', 26);
+    ctx.fillStyle = '#9A9AA5'; ctx.font = '400 30px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(short, W / 2, end + 70);
+    ctx.font = '600 46px Jost, Inter, sans-serif';
+    const tagLines = kitWrap(ctx, tag, 940).length;
+    kitGradText(ctx, tag, W / 2, H - 150 - (tagLines - 1) * 46 * 1.15, 46, 940, 'center');
+    ctx.fillStyle = '#C9C9D1'; ctx.font = '500 30px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Thank you for trusting Litpax', W / 2, H - 80);
+  }
+
+  if (fmt.id === 'print') {
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, H);
+    // dark header band
+    ctx.save(); rr(ctx, 0, 0, W, 430, 0); ctx.clip(); kitBg(ctx, W, 430, .8); ctx.restore();
+    kitLogo(ctx, W / 2, 230, 120, 'center');
+    kitBadge(ctx, badge, W / 2, 330, 26, 'center');
+    let y = kitText(ctx, head, W / 2, 580, { font: '600 104px Jost, Inter, sans-serif', size: 104, color: '#141418', maxW: 1080, lh: 1.05, align: 'center' });
+    y = kitText(ctx, sub, W / 2, y + 74, { font: '400 40px Inter, sans-serif', size: 40, color: '#52525B', maxW: 1000, lh: 1.35, align: 'center' });
+    kitStars(ctx, W / 2, y + 82, 34, 18, 'center');
+    // QR with brand gradient frame
+    const q = 520, fx = W / 2 - q / 2 - 34, fy = y + 150;
+    const g = ctx.createLinearGradient(fx, fy, fx + q + 68, fy + q + 68); g.addColorStop(0, '#EB5558'); g.addColorStop(1, '#F4D14B');
+    ctx.fillStyle = g; rr(ctx, fx, fy, q + 68, q + 68, 40); ctx.fill();
+    ctx.fillStyle = '#fff'; rr(ctx, fx + 10, fy + 10, q + 48, q + 48, 32); ctx.fill();
+    kitQR(ctx, url, fx + 34, fy + 34, q);
+    const ay = fy + q + 68;
+    ctx.fillStyle = '#141418'; ctx.font = '600 38px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Scan with your phone camera', W / 2, ay + 80);
+    ctx.fillStyle = '#71717A'; ctx.font = '400 30px Inter, sans-serif';
+    ctx.fillText(short, W / 2, ay + 130);
+    kitGradText(ctx, tag, W / 2, H - 90, 44, 1100, 'center');
+    ctx.fillStyle = '#A1A1AA'; ctx.font = '400 24px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(cfgText('CompanyName', 'Litpax Technology Pvt. Ltd.'), W / 2, H - 38);
+  }
+}
+
+function kitCaption(src) {
+  return ($('kitCaption') ? $('kitCaption').value : cfgText('KitCaption', KIT_DEFAULTS.KitCaption)).replace(/\{Link\}/gi, kitLink(src));
+}
+function kitBlob(canvas, type = 'image/png') { return new Promise(res => canvas.toBlob(res, type, .95)); }
+function kitDownload(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function kitCopy(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) { return false; }
+}
+
+async function renderShareKit() {
+  $('pageTitle').textContent = 'Share Kit';
+  $('page').innerHTML = '<div class="skeleton tall"></div><div class="kit-grid">' + '<div class="skeleton tall" style="height:360px"></div>'.repeat(3) + '</div>';
+  try { await kitPrepare(); } catch (e) { return pageError('Could not load the QR library. Check your internet and try again.'); }
+  if (state.view !== 'sharekit') return;
+
+  const v = (k) => cfgText(k, KIT_DEFAULTS[k] || '') || (k === 'KitBadge' ? cfgText('PopupBadge', KIT_DEFAULTS.KitBadge) : '');
+  $('page').innerHTML = `
+    <div class="card kit-controls">
+      <div class="card-head"><h3>Design Text</h3><span class="muted" style="font-size:13px">Changes update the images instantly</span></div>
+      <div class="set-grid">
+        <div class="set-field"><label>Badge <span class="opt">e.g. Happy Diwali</span></label><input class="input" data-kit="KitBadge" maxlength="32" value="${esc(v('KitBadge'))}"></div>
+        <div class="set-field"><label>Headline</label><input class="input" data-kit="KitHeadline" maxlength="40" value="${esc(v('KitHeadline'))}"></div>
+        <div class="set-field"><label>Sub line</label><input class="input" data-kit="KitSubline" maxlength="70" value="${esc(v('KitSubline'))}"></div>
+        <div class="set-field"><label>Tagline</label><input class="input" data-kit="KitTagline" maxlength="50" value="${esc(v('KitTagline'))}"></div>
+        <div class="set-field full"><label>WhatsApp caption <span class="opt">{Link} becomes the form link</span></label>
+          <textarea class="input textarea" id="kitCaption" maxlength="500" style="min-height:120px">${esc(v('KitCaption'))}</textarea></div>
+      </div>
+      <div class="kit-ctl-actions">
+        <button class="btn btn-ghost" id="kitCopyCap">${ICONS.copy}<span>Copy Caption</span></button>
+        ${state.role === 'Admin' ? '<button class="btn btn-dark" id="kitSave">Save as Default</button>' : ''}
+      </div>
+    </div>
+    <div class="kit-grid">
+      ${KIT_FORMATS.map(f => `
+        <div class="card kit-card">
+          <div class="kit-head"><h3>${f.title}</h3><p>${f.desc}</p></div>
+          <div class="kit-canvas kit-${f.id}"><canvas id="kit_${f.id}"></canvas></div>
+          <div class="kit-actions">
+            ${f.id === 'print'
+              ? `<button class="btn btn-primary" data-pdf="${f.id}">${ICONS.download}<span>Download PDF</span></button>
+                 <button class="btn btn-ghost" data-png="${f.id}">${ICONS.image}<span>PNG</span></button>`
+              : `<button class="btn btn-wa" data-share="${f.id}">${ICONS.share}<span>Share</span></button>
+                 <button class="btn btn-ghost" data-png="${f.id}">${ICONS.download}<span>Download</span></button>`}
+          </div>
+        </div>`).join('')}
+    </div>
+    <p class="wa-tip" style="margin-top:14px">On a phone, <b>Share</b> opens WhatsApp with the image and caption together. On a computer, download the image, attach it in WhatsApp Web and paste the caption (it is copied for you). QR codes link to the form with their own source tag, so you can see in Reviews which one customers used.</p>`;
+
+  const redraw = () => KIT_FORMATS.forEach(f => drawKit(f, $('kit_' + f.id)));
+  let t; document.querySelectorAll('[data-kit]').forEach(i => i.addEventListener('input', () => { clearTimeout(t); t = setTimeout(redraw, 200); }));
+  redraw();
+
+  $('kitCopyCap').onclick = async () => toast(await kitCopy(kitCaption('wa-poster')) ? 'Caption copied' : 'Copy failed', true);
+
+  document.querySelectorAll('[data-png]').forEach(b => b.onclick = async () => {
+    const f = KIT_FORMATS.find(x => x.id === b.dataset.png);
+    kitDownload(await kitBlob($('kit_' + f.id)), `Litpax_Feedback_${f.title.replace(/\W+/g, '_')}.png`);
+  });
+
+  document.querySelectorAll('[data-share]').forEach(b => b.onclick = async () => {
+    const f = KIT_FORMATS.find(x => x.id === b.dataset.share);
+    const blob = await kitBlob($('kit_' + f.id), 'image/jpeg');
+    const file = new File([blob], 'Litpax_Feedback.jpg', { type: 'image/jpeg' });
+    const caption = kitCaption(f.src);
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await kitCopy(caption); await navigator.share({ files: [file], text: caption }); }
+      catch (e) { if (e.name !== 'AbortError') toast('Sharing failed. Try Download instead.', false); }
+    } else {
+      kitDownload(blob, 'Litpax_Feedback.jpg');
+      toast(await kitCopy(caption) ? 'Image downloaded and caption copied. Attach it in WhatsApp.' : 'Image downloaded. Copy the caption above.');
+    }
+  });
+
+  document.querySelectorAll('[data-pdf]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try {
+      await loadScript(CONFIG.PDF_JS);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: 'mm', format: 'a6', orientation: 'portrait' });
+      pdf.addImage($('kit_print').toDataURL('image/jpeg', .95), 'JPEG', 0, 0, 105, 148);
+      pdf.save('Litpax_Feedback_Card_A6.pdf');
+    } catch (e) { toast('Could not create PDF. Use PNG instead.', false); }
+    finally { b.disabled = false; }
+  });
+
+  if ($('kitSave')) $('kitSave').onclick = async () => {
+    const btn = $('kitSave'); btn.disabled = true; btn.textContent = 'Saving...';
+    try {
+      const fresh = await api('config');
+      if (!fresh.ok) throw new Error(fresh.message);
+      const items = [];
+      Object.keys(fresh.config).forEach(type => fresh.config[type].forEach(r => items.push({ type, key: r.key, value: r.value, active: r.active })));
+      const set = (key, value) => { const it = items.find(i => i.type === 'Text' && i.key === key); if (it) { it.value = value; it.active = true; } else items.push({ type: 'Text', key, value }); };
+      ['KitBadge', 'KitHeadline', 'KitSubline', 'KitTagline'].forEach(k => set(k, kitVal(k)));
+      set('KitCaption', $('kitCaption').value.trim());
+      const r = await adminApi('saveConfig', { items: JSON.stringify(items) });
+      if (!r.ok) return toast(r.message, false);
+      const again = await api('config');
+      if (again.ok) { state.cfg = again.config; store.set('lx_review_cfg', again.config); }
+      toast('Saved as default');
+    } catch (e) { if (e.message !== 'AUTH') toast(e.message || 'Save failed', false); }
+    finally { btn.disabled = false; btn.textContent = 'Save as Default'; }
+  };
 }
 
 /* ---------- Settings (UI-driven config) ---------- */
