@@ -123,14 +123,22 @@
 
       <!-- Thank you -->
       <section id="thankView" class="thank-card hidden" aria-live="polite">
-        <div class="thank-battery">
-          <div class="tb-body"><div class="tb-fill"></div>
-            <svg class="tb-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        <div class="thank-top">
+          <div class="t-glow" aria-hidden="true"></div>
+          <div class="t-sparks" id="tSparks" aria-hidden="true"></div>
+          <div class="thank-battery">
+            <div class="tb-body"><div class="tb-fill"></div>
+              <svg class="tb-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </div>
+            <div class="tb-cap"></div>
           </div>
-          <div class="tb-cap"></div>
+          <span class="t-badge">Feedback Received</span>
+          <h2 id="thankName" class="t-name"></h2>
+          <h3 id="thankTitle" class="t-title"></h3>
+          <p id="thankText" class="t-text"></p>
+          <p id="thankWish" class="t-wish"></p>
         </div>
-        <h2 id="thankTitle"></h2>
-        <p id="thankText" class="thank-text"></p>
+        <div class="thank-avg" id="thankAvg"></div>
         <div id="thankSummary" class="thank-summary"></div>
         <div id="thankLow" class="thank-low hidden"></div>
         <div id="thankGoogle" class="thank-google hidden">
@@ -232,6 +240,7 @@
     </div>
   </div>
 
+  <div id="confetti" class="confetti" aria-hidden="true"></div>
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
