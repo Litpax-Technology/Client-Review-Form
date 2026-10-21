@@ -1018,7 +1018,8 @@ function kitShort() { return (location.host + location.pathname.replace(/index\.
 
 async function kitPrepare() {
   if (kit.ready) return;
-  await loadScript(CONFIG.QR_JS);
+  try { await loadScript(CONFIG.QR_JS); } catch (e) {}
+  if (typeof qrcode === 'undefined') await loadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js');
   try {
     await Promise.all(['600 80px Jost', '500 40px Jost', '400 30px Inter', '600 30px Inter'].map(f => document.fonts.load(f)));
   } catch (e) {}
